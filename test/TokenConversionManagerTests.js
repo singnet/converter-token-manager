@@ -93,8 +93,6 @@ console.log("Number of Accounts - ", accounts.length)
             const wallet_bal_b = (await token.balanceOf(_account)).toNumber();
             const contract_bal_b = (await token.balanceOf(tokenConversionManager.address)).toNumber();
 
-            const balance_b = (await tokenConversionManager.balance.call()).toNumber();
-
             // Call Lock Tokens
             await tokenConversionManager.lockTokens(_amount, {from:_account});
 
@@ -102,16 +100,11 @@ console.log("Number of Accounts - ", accounts.length)
             const wallet_bal_a = (await token.balanceOf(_account)).toNumber();
             const contract_bal_a = (await token.balanceOf(tokenConversionManager.address)).toNumber();
 
-            const balance_a = (await tokenConversionManager.balance.call()).toNumber();
-
             // Wallet Balance Should Reduce
             assert.equal(wallet_bal_a, wallet_bal_b - _amount);
 
             // Contract Balance Should Increase
             assert.equal(contract_bal_a, contract_bal_b + _amount);
-
-            // Balance in the contract Should increase
-            assert.equal(balance_a, balance_b + _amount);
 
         }
 
@@ -194,16 +187,16 @@ console.log("Number of Accounts - ", accounts.length)
         let sourceAddressBuffer = Buffer.from(sourceAddressHex, 'hex')
 
 
-        console.log("sourceAddress - ", sourceAddress);
-        console.log("sourceAddressHex - ", sourceAddressHex);
-        console.log("sourceAddressBytes - ", sourceAddressBytes);
-        console.log("buffer - ", Buffer.from(sourceAddressHex, 'hex'));
+        //console.log("sourceAddress - ", sourceAddress);
+        //console.log("sourceAddressHex - ", sourceAddressHex);
+        //console.log("sourceAddressBytes - ", sourceAddressBytes);
+        //console.log("buffer - ", Buffer.from(sourceAddressHex, 'hex'));
 
         //sign message by the private key of conversion authorizer accounts[9]
         let sgn = await signFuns.waitSignedMessage(accounts[9], amount_a1, accounts[1], blockNumber, tokenConversionManager.address, sourceAddressBuffer);
 
         let vrs = signFuns.getVRSFromSignature(sgn.toString("hex"));
-console.log("here....")
+
         // With Signature Parameter
         await tokenConversionManager.unLockTokens(amount_a1, blockNumber, sourceAddressBuffer, vrs.v, vrs.r, vrs.s, {from:accounts[1]});
 

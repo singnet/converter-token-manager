@@ -11,9 +11,6 @@ contract TokenConversionManager is Ownable {
     ERC20 public token; // Address of token contract
     address public conversionAuthorizer; // Authorizer Address for the conversion 
 
-    // TBD - See if this public variable truely needed
-    uint256 public balance;
-
     //already used conversion signature from authorizer in order to prevent replay attack
     mapping (bytes32 => bool) public usedSignatures; 
 
@@ -21,7 +18,7 @@ contract TokenConversionManager is Ownable {
     // Events
     event NewAuthorizer(address conversionAuthorizer);
     event LockToken(address indexed tokenHolder, uint256 lockAmount);
-    //event UnLock(uint256 indexed stakeIndex, address indexed staker, uint256 stakeAmount);
+    event UnLock(address indexed tokenHolder, uint256 unlockAmount, bytes sourceAddress);
 
     constructor(address _token)
     public
@@ -44,9 +41,6 @@ contract TokenConversionManager is Ownable {
         // Transfer the Tokens to Contract
         require(token.transferFrom(msg.sender, address(this), amount), "Unable to transfer token to the contract");
 
-        // add the balance
-        balance = balance.add(amount);
-
         emit LockToken(msg.sender, amount);
 
     }
@@ -68,6 +62,8 @@ contract TokenConversionManager is Ownable {
 
         // Return to User Wallet
         require(token.transfer(msg.sender, amount), "Unable to transfer token to the account");
+
+        emit UnLock(msg.sender, amount, sourceAddress);
 
     }
 
