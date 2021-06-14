@@ -36,7 +36,7 @@ let truffleOptions = {
             network_id: "3", // ropsten network ID, 
         },
         main: {
-            gasPrice: 50000000000,
+            gasPrice: 150000000000,
             provider: () => provider("https://mainnet.infura.io/v3/" + process.env.InfuraKey),
             network_id: "1" // mainnet network ID
        },
