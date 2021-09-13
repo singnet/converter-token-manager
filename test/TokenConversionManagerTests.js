@@ -151,9 +151,9 @@ console.log("Number of Accounts - ", accounts.length)
         // accounts[9] -> Conversion Authorizer
 
         // An explicit call is required to mint the tokens for AGI-II
-        //await token.mint(accounts[0], GAmt, {from:accounts[0]});
+        await token.mint(accounts[0], GAmt, {from:accounts[0]});
 
-        await approveTokensToContract(1, 9, GAmt);
+        await approveTokensToContract(1, 9, amount_a1);
 
     });
 

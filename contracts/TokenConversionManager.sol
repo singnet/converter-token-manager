@@ -3,8 +3,9 @@ pragma solidity >=0.4.22 <0.8.0;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract TokenConversionManager is Ownable {
+contract TokenConversionManager is Ownable, ReentrancyGuard {
 
     using SafeMath for uint256;
 
@@ -36,7 +37,7 @@ contract TokenConversionManager is Ownable {
     }
 
 
-    function lockTokens(uint256 amount) external {
+    function lockTokens(uint256 amount) external nonReentrant {
 
         // Transfer the Tokens to Contract
         require(token.transferFrom(msg.sender, address(this), amount), "Unable to transfer token to the contract");
@@ -45,7 +46,7 @@ contract TokenConversionManager is Ownable {
 
     }
 
-    function unLockTokens(uint256 amount, uint256 blockNumber, bytes calldata sourceAddress,uint8 v, bytes32 r, bytes32 s) external {
+    function unLockTokens(uint256 amount, uint256 blockNumber, bytes calldata sourceAddress,uint8 v, bytes32 r, bytes32 s) external nonReentrant {
 
         // Check if contract is having required balance 
         require(token.balanceOf(address(this)) >= amount, "Not enough balance in the contract");
