@@ -108,6 +108,27 @@ console.log("Number of Accounts - ", accounts.length)
 
         }
 
+        const unLockTokensAndVerify = async(_amount, _blockNumber, _sourceAddressBuffer, _v, _r, _s, _account) => {
+
+            // Token Balance
+            const wallet_bal_b = (await token.balanceOf(_account)).toNumber();
+            const contract_bal_b = (await token.balanceOf(tokenConversionManager.address)).toNumber();
+
+            // Call UnLock Tokens
+            await tokenConversionManager.unLockTokens(_amount, _blockNumber, _sourceAddressBuffer, _v, _r, _s, {from:_account});
+
+            // Token Balance
+            const wallet_bal_a = (await token.balanceOf(_account)).toNumber();
+            const contract_bal_a = (await token.balanceOf(tokenConversionManager.address)).toNumber();
+
+            // Wallet Balance Should Reduce
+            assert.equal(wallet_bal_a, wallet_bal_b + _amount);
+
+            // Contract Balance Should Increase
+            assert.equal(contract_bal_a, contract_bal_b - _amount);
+
+        }
+
         const getRandomNumber = (max) => {
             const min = 10; // To avoid zero rand number
             return Math.floor(Math.random() * (max - min) + min);
@@ -197,8 +218,15 @@ console.log("Number of Accounts - ", accounts.length)
 
         let vrs = signFuns.getVRSFromSignature(sgn.toString("hex"));
 
+
+        // If the amount is different from authorizer signature - Should fail
+        await testErrorRevert(tokenConversionManager.unLockTokens(amount_a1-10, blockNumber, sourceAddressBuffer, vrs.v, vrs.r, vrs.s, {from:accounts[1]}));
+
         // With Signature Parameter
-        await tokenConversionManager.unLockTokens(amount_a1, blockNumber, sourceAddressBuffer, vrs.v, vrs.r, vrs.s, {from:accounts[1]});
+        await unLockTokensAndVerify(amount_a1, blockNumber, sourceAddressBuffer, vrs.v, vrs.r, vrs.s, accounts[1]);
+
+        // User trying to pass same signature - Should fail
+        await testErrorRevert(tokenConversionManager.unLockTokens(amount_a1, blockNumber, sourceAddressBuffer, vrs.v, vrs.r, vrs.s, {from:accounts[1]}));
 
     });
 

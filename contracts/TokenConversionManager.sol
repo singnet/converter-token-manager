@@ -36,7 +36,7 @@ contract TokenConversionManager is Ownable {
     }
 
 
-    function lockTokens(uint256 amount) public {
+    function lockTokens(uint256 amount) external {
 
         // Transfer the Tokens to Contract
         require(token.transferFrom(msg.sender, address(this), amount), "Unable to transfer token to the contract");
@@ -45,7 +45,7 @@ contract TokenConversionManager is Ownable {
 
     }
 
-    function unLockTokens(uint256 amount, uint256 blockNumber, bytes memory sourceAddress,uint8 v, bytes32 r, bytes32 s) public {
+    function unLockTokens(uint256 amount, uint256 blockNumber, bytes memory sourceAddress,uint8 v, bytes32 r, bytes32 s) external {
 
         // Check if contract is having required balance 
         require(token.balanceOf(address(this)) >= amount, "Not enough balance in the contract");
