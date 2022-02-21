@@ -7,5 +7,6 @@ addresses.json
 /.vscode
 
 /coverage*
+/coverage
 .solcover.js
 coverage.json
