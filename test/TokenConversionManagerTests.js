@@ -1,5 +1,6 @@
 "use strict";
 var  TokenConversionManager = artifacts.require("./TokenConversionManager.sol");
+const { BN, expectRevert, expectEvent, time } = require('@openzeppelin/test-helpers');
 
 let Contract = require("@truffle/contract");
 let TokenAbi = require("singularitynet-token-contracts/abi/SingularityNetToken.json");
@@ -11,6 +12,8 @@ Token.setProvider(web3.currentProvider);
 var ethereumjsabi  = require('ethereumjs-abi');
 var ethereumjsutil = require('ethereumjs-util');
 let signFuns       = require('./sign_funcs');
+
+var uuid = require('uuid');
 
 const { assert } = require("chai");
 
@@ -87,6 +90,56 @@ console.log("Number of Accounts - ", accounts.length)
 
         }
 
+        const conversionOutAndVerify = async(_amount, _account, _conversionIdInHex, _v, _r, _s) => {
+
+            // Token Balance
+            const wallet_bal_b = (await token.balanceOf(_account)).toNumber();
+
+            // total supply
+            const totalSupply_b = (await token.totalSupply()).toNumber();
+
+            // Call Lock Tokens
+            await tokenConversionManager.conversionOut(_amount, _conversionIdInHex, _v, _r, _s, {from:_account});
+
+            // Token Balance
+            const wallet_bal_a = (await token.balanceOf(_account)).toNumber();
+
+            // total supply
+            const totalSupply_a = (await token.totalSupply()).toNumber();
+
+            // Wallet Balance Should Reduce
+            assert.equal(wallet_bal_a, wallet_bal_b - _amount);
+
+            // Total Supply should reduce
+            assert.equal(totalSupply_a, totalSupply_b - _amount);
+
+        }
+
+        const conversionInAndVerify = async(_to, _amount, _account, _conversionIdInHex, _v, _r, _s) => {
+
+            // Token Balance
+            const wallet_bal_b = (await token.balanceOf(_to)).toNumber();
+
+            // total supply
+            const totalSupply_b = (await token.totalSupply()).toNumber();
+
+            // Call Lock Tokens
+            await tokenConversionManager.conversionIn(_to, _amount, _conversionIdInHex, _v, _r, _s, {from:_account});
+
+            // Token Balance
+            const wallet_bal_a = (await token.balanceOf(_to)).toNumber();
+
+            // total supply
+            const totalSupply_a = (await token.totalSupply()).toNumber();
+
+            // Wallet Balance Should Reduce
+            assert.equal(wallet_bal_a, wallet_bal_b + _amount);
+
+            // Total Supply should reduce
+            assert.equal(totalSupply_a, totalSupply_b + _amount);
+
+        }
+
         const lockTokensAndVerify = async(_amount, _account) => {
 
             // Token Balance
@@ -141,6 +194,12 @@ console.log("Number of Accounts - ", accounts.length)
               });
         }
 
+        const getUUID = () => {
+
+            return uuid.v4().toString().replace(/-/g, '');
+
+        }
+
 
     // ************************ Test Scenarios Starts From Here ********************************************
 
@@ -153,7 +212,11 @@ console.log("Number of Accounts - ", accounts.length)
         // An explicit call is required to mint the tokens for AGI-II
         await token.mint(accounts[0], GAmt, {from:accounts[0]});
 
-        await approveTokensToContract(1, 9, amount_a1);
+        await approveTokensToContract(1, 9, 5 * amount_a1);
+
+        // Add the tokenConversionManager as the minter in the token contract
+        let role = "0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6";
+        await token.grantRole(role, tokenConversionManager.address, {from:accounts[0]});
 
     });
 
@@ -194,7 +257,6 @@ console.log("Number of Accounts - ", accounts.length)
 
     });
 
-
     it("3. UnLock Tokens by User - Signature from Authorizer", async function() 
     {
 
@@ -227,6 +289,65 @@ console.log("Number of Accounts - ", accounts.length)
 
         // User trying to pass same signature - Should fail
         await testErrorRevert(tokenConversionManager.unLockTokens(amount_a1, blockNumber, sourceAddressBuffer, vrs.v, vrs.r, vrs.s, {from:accounts[1]}));
+
+    });
+
+    it("4. Conversion from Eth to nonEth network", async function() 
+    {
+
+        // Conversion of tokens from Account-1
+        let conversionId = getUUID();
+        let conversionIdInHex = web3.utils.asciiToHex(conversionId);
+        console.log("conversionId - ", conversionId); 
+
+        let sgn = await signFuns.waitSignedMessageConversionOut(accounts[9], amount_a1, accounts[1], conversionIdInHex, tokenConversionManager.address);
+        let vrs = signFuns.getVRSFromSignature(sgn.toString("hex"));
+
+
+        // Try calling the function with different amount the Signature should fail
+        await expectRevert(
+            tokenConversionManager.conversionOut(amount_a1-10, conversionIdInHex, vrs.v, vrs.r, vrs.s, {from:accounts[1]}),
+            'Invalid request or signature'
+        );
+
+        await conversionOutAndVerify(amount_a1, accounts[1], conversionIdInHex, vrs.v, vrs.r, vrs.s);
+
+
+        // Try calling the function with same Signature should fail
+        await expectRevert(
+            tokenConversionManager.conversionOut(amount_a1, conversionIdInHex, vrs.v, vrs.r, vrs.s, {from:accounts[1]}),
+            'Signature has already been used'
+        );
+
+    });
+
+
+    it("5. Conversion from nonEth to Eth network", async function() 
+    {
+
+        // Conversion of tokens from Account-1
+        let conversionId = getUUID();
+        let conversionIdInHex = web3.utils.asciiToHex(conversionId);
+        console.log("conversionId - ", conversionId); 
+
+        let sgn = await signFuns.waitSignedMessageConversionIn(accounts[9], amount_a1, accounts[1], conversionIdInHex, tokenConversionManager.address);
+        let vrs = signFuns.getVRSFromSignature(sgn.toString("hex"));
+
+
+        // Try calling the function with different amount the Signature should fail
+        await expectRevert(
+            tokenConversionManager.conversionIn(accounts[1], amount_a1-10, conversionIdInHex, vrs.v, vrs.r, vrs.s, {from:accounts[1]}),
+            'Invalid request or signature'
+        );
+
+        await conversionInAndVerify(accounts[1], amount_a1, accounts[1], conversionIdInHex, vrs.v, vrs.r, vrs.s);
+
+
+        // Try calling the function with same Signature should fail
+        await expectRevert(
+            tokenConversionManager.conversionIn(accounts[1], amount_a1, conversionIdInHex, vrs.v, vrs.r, vrs.s, {from:accounts[1]}),
+            'Signature has already been used'
+        );
 
     });
 
