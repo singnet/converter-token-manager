@@ -15,12 +15,28 @@ contract TokenConversionManager is Ownable, ReentrancyGuard {
     //already used conversion signature from authorizer in order to prevent replay attack
     mapping (bytes32 => bool) public usedSignatures; 
 
+    // Conversion Configurations
+    uint256 public perTxnMinAmount;
+    uint256 public perTxnMaxAmount;
+    uint256 public maxSupply;
 
     // Events
     event NewAuthorizer(address conversionAuthorizer);
+    event UpdateConfiguration(uint256 perTxnMinAmount, uint256 perTxnMaxAmount, uint256 maxSupply);
 
     event ConversionOut(address indexed tokenHolder, bytes32 conversionId, uint256 amount);
     event ConversionIn(address indexed tokenHolder, bytes32 conversionId, uint256 amount);
+
+
+    // Modifiers
+    modifier checkLimits(uint256 amount) {
+
+        // Check for min, max per transaction limits
+        require(amount >= perTxnMinAmount && amount <= perTxnMaxAmount, "Violates conversion limits");
+        _;
+
+    }
+
 
     constructor(address _token)
     public
@@ -37,8 +53,24 @@ contract TokenConversionManager is Ownable, ReentrancyGuard {
         emit NewAuthorizer(newAuthorizer);
     }
 
+    function updateConfigurations(uint256 _perTxnMinAmount, uint256 _perTxnMaxAmount, uint256 _maxSupply) public onlyOwner {
 
-    function conversionOut(uint256 amount, bytes32 conversionId, uint8 v, bytes32 r, bytes32 s) external nonReentrant {
+        // Check for the valid inputs
+        require(_perTxnMinAmount > 0 && _perTxnMaxAmount > _perTxnMinAmount && _maxSupply > 0, "Invalid inputs");
+
+        // Update the configurations
+        perTxnMinAmount = _perTxnMinAmount;
+        perTxnMaxAmount = _perTxnMaxAmount;
+        maxSupply = _maxSupply;
+
+        emit UpdateConfiguration(_perTxnMinAmount, _perTxnMaxAmount, _maxSupply);
+
+    }
+
+
+    function conversionOut(uint256 amount, bytes32 conversionId, uint8 v, bytes32 r, bytes32 s) external checkLimits(amount) nonReentrant {
+
+        // Check for non zero value for the amount is not needed as the Signature will not be generated for zero amount
 
         // Check for the Balance
         require(token.balanceOf(msg.sender) >= amount, "Not enough balance");
@@ -62,9 +94,12 @@ contract TokenConversionManager is Ownable, ReentrancyGuard {
     }
 
 
-    function conversionIn(address to, uint256 amount, bytes32 conversionId, uint8 v, bytes32 r, bytes32 s) external nonReentrant {
+    function conversionIn(address to, uint256 amount, bytes32 conversionId, uint8 v, bytes32 r, bytes32 s) external checkLimits(amount) nonReentrant {
        
+       // Check for the valid destimation wallet
        require(to != address(0), "Invalid wallet");
+
+        // Check for non zero value for the amount is not needed as the Signature will not be generated for zero amount
 
         //compose the message which was signed
         bytes32 message = prefixed(keccak256(abi.encodePacked("__conversionIn", amount, msg.sender, conversionId, this)));
@@ -77,8 +112,8 @@ contract TokenConversionManager is Ownable, ReentrancyGuard {
         require( ! usedSignatures[message], "Signature has already been used");
         usedSignatures[message] = true;
 
-        // TODO - Add conditions to safe gaurd any attacks
-
+        // Check for the supply
+        require(token.totalSupply().add(amount) <= maxSupply, "Invalid Amount");
 
         // Mint the tokens and transfer to the User Wallet using the Call function
         // token.mint(amount, msg.sender);

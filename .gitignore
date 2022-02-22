@@ -6,7 +6,7 @@ npm-debug.log
 addresses.json
 /.vscode
 
-/coverage*
-/coverage
+coverage/*
+coverage*
 .solcover.js
 coverage.json
