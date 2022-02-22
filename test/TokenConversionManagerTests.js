@@ -248,50 +248,6 @@ console.log("Number of Accounts - ", accounts.length)
 
     });
 
-
-    it("3. Lock Tokens by User", async function() 
-    {
-
-        // Lock of tokens from Account-1
-        await lockTokensAndVerify(amount_a1, accounts[1]);
-
-    });
-
-    it("3. UnLock Tokens by User - Signature from Authorizer", async function() 
-    {
-
-        const max = 100;
-        const lockAmount_a1 =  getRandomNumber(max) * 100000000;
-
-        let blockNumber = await web3.eth.getBlockNumber();
-        let sourceAddress = "addr_test1vq4pfxeknh5v3vlwlj9pt34ac9rk5zyw6nlc2hxh2aq9rssjlqrsj";
-        let sourceAddressHex = web3.utils.asciiToHex(sourceAddress);
-        let sourceAddressBytes = web3.utils.hexToBytes(sourceAddressHex)
-        let sourceAddressBuffer = Buffer.from(sourceAddressHex, 'hex')
-
-
-        //console.log("sourceAddress - ", sourceAddress);
-        //console.log("sourceAddressHex - ", sourceAddressHex);
-        //console.log("sourceAddressBytes - ", sourceAddressBytes);
-        //console.log("buffer - ", Buffer.from(sourceAddressHex, 'hex'));
-
-        //sign message by the private key of conversion authorizer accounts[9]
-        let sgn = await signFuns.waitSignedMessage(accounts[9], amount_a1, accounts[1], blockNumber, tokenConversionManager.address, sourceAddressBuffer);
-
-        let vrs = signFuns.getVRSFromSignature(sgn.toString("hex"));
-
-
-        // If the amount is different from authorizer signature - Should fail
-        await testErrorRevert(tokenConversionManager.unLockTokens(amount_a1-10, blockNumber, sourceAddressBuffer, vrs.v, vrs.r, vrs.s, {from:accounts[1]}));
-
-        // With Signature Parameter
-        await unLockTokensAndVerify(amount_a1, blockNumber, sourceAddressBuffer, vrs.v, vrs.r, vrs.s, accounts[1]);
-
-        // User trying to pass same signature - Should fail
-        await testErrorRevert(tokenConversionManager.unLockTokens(amount_a1, blockNumber, sourceAddressBuffer, vrs.v, vrs.r, vrs.s, {from:accounts[1]}));
-
-    });
-
     it("4. Conversion from Eth to nonEth network", async function() 
     {
 
