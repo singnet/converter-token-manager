@@ -25,6 +25,27 @@ function signMessageFromAuthorizer(authorizerAccount, amount, tokenHolder, block
 
 }
 
+function signMessageFromAuthorizerConversionOut(authorizerAccount, amount, tokenHolder, conversionId, contractAddress, callback)
+{
+    var sigPrefix = "__conversionOut";
+    var message = ethereumjsabi.soliditySHA3(
+        ["string", "uint256", "address", "bytes32", "address"],
+        [sigPrefix, amount, tokenHolder, conversionId, contractAddress]);
+
+    signMessage(authorizerAccount, message, callback);    
+
+}
+
+function signMessageFromAuthorizerConversionIn(authorizerAccount, amount, tokenHolder, conversionId, contractAddress, callback)
+{
+    var sigPrefix = "__conversionIn";
+    var message = ethereumjsabi.soliditySHA3(
+        ["string", "uint256", "address", "bytes32", "address"],
+        [sigPrefix, amount, tokenHolder, conversionId, contractAddress]);
+
+    signMessage(authorizerAccount, message, callback);     
+
+}
 
 // this mimics the prefixing behavior of the ethSign JSON-RPC method.
 function prefixed(hash) {
@@ -81,6 +102,41 @@ async function waitSignedMessage(authorizerAccount, amount, tokenHolder, blockNu
     return rezSign;
 } 
 
+async function waitSignedMessageConversionOut(authorizerAccount, amount, tokenHolder, conversionId, contractAddress)
+{
+    let detWait = true;
+    let rezSign;
+    signMessageFromAuthorizerConversionOut(authorizerAccount, amount, tokenHolder, conversionId, contractAddress, function(err,sgn)
+        {   
+            detWait = false;
+            rezSign = sgn
+        });
+    while(detWait)
+    {
+        await sleep(1)
+    }
+    return rezSign;
+} 
+
+async function waitSignedMessageConversionIn(authorizerAccount, amount, tokenHolder, conversionId, contractAddress)
+{
+    let detWait = true;
+    let rezSign;
+    signMessageFromAuthorizerConversionIn(authorizerAccount, amount, tokenHolder, conversionId, contractAddress, function(err,sgn)
+        {   
+            detWait = false;
+            rezSign = sgn
+        });
+    while(detWait)
+    {
+        await sleep(1)
+    }
+    return rezSign;
+}
+
+
 module.exports.waitSignedMessage   = waitSignedMessage;
+module.exports.waitSignedMessageConversionOut = waitSignedMessageConversionOut;
+module.exports.waitSignedMessageConversionIn = waitSignedMessageConversionIn;
 module.exports.isValidSignatureClaim    = isValidSignatureClaim;
 module.exports.getVRSFromSignature      = getVRSFromSignature; 

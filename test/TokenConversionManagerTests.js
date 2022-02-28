@@ -1,5 +1,6 @@
 "use strict";
 var  TokenConversionManager = artifacts.require("./TokenConversionManager.sol");
+const { BN, expectRevert, expectEvent, time } = require('@openzeppelin/test-helpers');
 
 let Contract = require("@truffle/contract");
 let TokenAbi = require("singularitynet-token-contracts/abi/SingularityNetToken.json");
@@ -11,6 +12,8 @@ Token.setProvider(web3.currentProvider);
 var ethereumjsabi  = require('ethereumjs-abi');
 var ethereumjsutil = require('ethereumjs-util');
 let signFuns       = require('./sign_funcs');
+
+var uuid = require('uuid');
 
 const { assert } = require("chai");
 
@@ -33,9 +36,10 @@ console.log("Number of Accounts - ", accounts.length)
     var tokenAddress;
     var token;
     
-    let GAmt = 10000  * 100000000;
+    let factor = 1 * 10**8;
+    let GAmt = 10000  * factor;
     const max = 100;
-    const amount_a1 =  10 * 100000000;
+    const amount_a1 =  10 * factor;
 
     before(async () => 
         {
@@ -84,6 +88,76 @@ console.log("Number of Accounts - ", accounts.length)
             // Get the Updated Conversion Authorizer
             const authorizer = await tokenConversionManager.conversionAuthorizer.call();
             assert.equal(authorizer, _authorizer);
+
+        }
+
+        const updateConfigurationsAndVerify = async(_perTxnMinAmount, _perTxnMaxAmount, _maxSupply, _account) => {
+
+            // Update the configurations
+            await tokenConversionManager.updateConfigurations(_perTxnMinAmount, _perTxnMaxAmount, _maxSupply, {from:_account});
+
+            // Get the values after the updation
+            const perTxnMinAmount = (await tokenConversionManager.perTxnMinAmount.call()).toNumber();
+            const perTxnMaxAmount =  (await tokenConversionManager.perTxnMaxAmount.call()).toNumber();
+            const maxSupply = (await tokenConversionManager.maxSupply.call()).toNumber();
+
+
+            // Check the Values
+            assert.equal(perTxnMinAmount, _perTxnMinAmount);
+            assert.equal(perTxnMaxAmount, _perTxnMaxAmount);
+            assert.equal(maxSupply, _maxSupply);
+
+        }
+
+        
+
+        const conversionOutAndVerify = async(_amount, _account, _conversionIdInHex, _v, _r, _s) => {
+
+            // Token Balance
+            const wallet_bal_b = (await token.balanceOf(_account)).toNumber();
+
+            // total supply
+            const totalSupply_b = (await token.totalSupply()).toNumber();
+
+            // Call Lock Tokens
+            await tokenConversionManager.conversionOut(_amount, _conversionIdInHex, _v, _r, _s, {from:_account});
+
+            // Token Balance
+            const wallet_bal_a = (await token.balanceOf(_account)).toNumber();
+
+            // total supply
+            const totalSupply_a = (await token.totalSupply()).toNumber();
+
+            // Wallet Balance Should Reduce
+            assert.equal(wallet_bal_a, wallet_bal_b - _amount);
+
+            // Total Supply should reduce
+            assert.equal(totalSupply_a, totalSupply_b - _amount);
+
+        }
+
+        const conversionInAndVerify = async(_to, _amount, _account, _conversionIdInHex, _v, _r, _s) => {
+
+            // Token Balance
+            const wallet_bal_b = (await token.balanceOf(_to)).toNumber();
+
+            // total supply
+            const totalSupply_b = (await token.totalSupply()).toNumber();
+
+            // Call Lock Tokens
+            await tokenConversionManager.conversionIn(_to, _amount, _conversionIdInHex, _v, _r, _s, {from:_account});
+
+            // Token Balance
+            const wallet_bal_a = (await token.balanceOf(_to)).toNumber();
+
+            // total supply
+            const totalSupply_a = (await token.totalSupply()).toNumber();
+
+            // Wallet Balance Should Reduce
+            assert.equal(wallet_bal_a, wallet_bal_b + _amount);
+
+            // Total Supply should reduce
+            assert.equal(totalSupply_a, totalSupply_b + _amount);
 
         }
 
@@ -141,6 +215,12 @@ console.log("Number of Accounts - ", accounts.length)
               });
         }
 
+        const getUUID = () => {
+
+            return uuid.v4().toString().replace(/-/g, '');
+
+        }
+
 
     // ************************ Test Scenarios Starts From Here ********************************************
 
@@ -153,7 +233,11 @@ console.log("Number of Accounts - ", accounts.length)
         // An explicit call is required to mint the tokens for AGI-II
         await token.mint(accounts[0], GAmt, {from:accounts[0]});
 
-        await approveTokensToContract(1, 9, amount_a1);
+        await approveTokensToContract(1, 9, 5 * amount_a1);
+
+        // Add the tokenConversionManager as the minter in the token contract
+        let role = "0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6";
+        await token.grantRole(role, tokenConversionManager.address, {from:accounts[0]});
 
     });
 
@@ -185,48 +269,124 @@ console.log("Number of Accounts - ", accounts.length)
 
     });
 
-
-    it("3. Lock Tokens by User", async function() 
+    it("3. Administrative Operations - Conversion Configurations", async function() 
     {
 
-        // Lock of tokens from Account-1
-        await lockTokensAndVerify(amount_a1, accounts[1]);
+        const perTxnMinAmount = 1 * factor;
+        const perTxnMaxAmount = amount_a1;
+        const maxSupply = GAmt;
+
+        // Authorizer should be uodated only by Owner
+        await expectRevert(
+            tokenConversionManager.updateConfigurations(perTxnMinAmount, perTxnMaxAmount, maxSupply, {from: accounts[1]}),
+            "caller is not the owner"
+        );
+
+        // Update the Authorizer to accounts[9]
+        await updateConfigurationsAndVerify(perTxnMinAmount, perTxnMaxAmount, maxSupply, accounts[0]);
+
+    });
+
+    it("4. Conversion from Eth to nonEth network", async function() 
+    {
+
+        // Conversion of tokens from Account-1
+        let conversionId = getUUID();
+        let conversionIdInHex = web3.utils.asciiToHex(conversionId);
+        console.log("conversionId - ", conversionId); 
+
+
+        // Try to convert the value less than per txn min amount should fail
+        let sgn = await signFuns.waitSignedMessageConversionOut(accounts[9], 100, accounts[1], conversionIdInHex, tokenConversionManager.address);
+        let vrs = signFuns.getVRSFromSignature(sgn.toString("hex"));
+        await expectRevert(
+            tokenConversionManager.conversionOut(100, conversionIdInHex, vrs.v, vrs.r, vrs.s, {from:accounts[1]}),
+            'Violates conversion limits'
+        );
+
+        // Try to convert the value less than per txn max amount should fail
+        sgn = await signFuns.waitSignedMessageConversionOut(accounts[9], amount_a1+100, accounts[1], conversionIdInHex, tokenConversionManager.address);
+        vrs = signFuns.getVRSFromSignature(sgn.toString("hex"));
+        await expectRevert(
+            tokenConversionManager.conversionOut(amount_a1+100, conversionIdInHex, vrs.v, vrs.r, vrs.s, {from:accounts[1]}),
+            'Violates conversion limits'
+        );
+
+        sgn = await signFuns.waitSignedMessageConversionOut(accounts[9], amount_a1, accounts[1], conversionIdInHex, tokenConversionManager.address);
+        vrs = signFuns.getVRSFromSignature(sgn.toString("hex"));
+
+
+        // Try calling the function with different amount the Signature should fail
+        await expectRevert(
+            tokenConversionManager.conversionOut(amount_a1-10, conversionIdInHex, vrs.v, vrs.r, vrs.s, {from:accounts[1]}),
+            'Invalid request or signature'
+        );
+
+        await conversionOutAndVerify(amount_a1, accounts[1], conversionIdInHex, vrs.v, vrs.r, vrs.s);
+
+
+        // Try calling the function with same Signature should fail
+        await expectRevert(
+            tokenConversionManager.conversionOut(amount_a1, conversionIdInHex, vrs.v, vrs.r, vrs.s, {from:accounts[1]}),
+            'Signature has already been used'
+        );
 
     });
 
 
-    it("3. UnLock Tokens by User - Signature from Authorizer", async function() 
+    it("5. Conversion from nonEth to Eth network", async function() 
     {
 
-        const max = 100;
-        const lockAmount_a1 =  getRandomNumber(max) * 100000000;
+        // Conversion of tokens from Account-1
+        let conversionId = getUUID();
+        let conversionIdInHex = web3.utils.asciiToHex(conversionId);
+        console.log("conversionId - ", conversionId); 
 
-        let blockNumber = await web3.eth.getBlockNumber();
-        let sourceAddress = "addr_test1vq4pfxeknh5v3vlwlj9pt34ac9rk5zyw6nlc2hxh2aq9rssjlqrsj";
-        let sourceAddressHex = web3.utils.asciiToHex(sourceAddress);
-        let sourceAddressBytes = web3.utils.hexToBytes(sourceAddressHex)
-        let sourceAddressBuffer = Buffer.from(sourceAddressHex, 'hex')
-
-
-        //console.log("sourceAddress - ", sourceAddress);
-        //console.log("sourceAddressHex - ", sourceAddressHex);
-        //console.log("sourceAddressBytes - ", sourceAddressBytes);
-        //console.log("buffer - ", Buffer.from(sourceAddressHex, 'hex'));
-
-        //sign message by the private key of conversion authorizer accounts[9]
-        let sgn = await signFuns.waitSignedMessage(accounts[9], amount_a1, accounts[1], blockNumber, tokenConversionManager.address, sourceAddressBuffer);
-
+        // Try to convert the value less than per txn min amount should fail
+        let sgn = await signFuns.waitSignedMessageConversionOut(accounts[9], 100, accounts[1], conversionIdInHex, tokenConversionManager.address);
         let vrs = signFuns.getVRSFromSignature(sgn.toString("hex"));
+        await expectRevert(
+            tokenConversionManager.conversionIn(accounts[1], 100, conversionIdInHex, vrs.v, vrs.r, vrs.s, {from:accounts[1]}),
+            'Violates conversion limits'
+        );
+
+        // Try to convert the value less than per txn max amount should fail
+        sgn = await signFuns.waitSignedMessageConversionOut(accounts[9], amount_a1+100, accounts[1], conversionIdInHex, tokenConversionManager.address);
+        vrs = signFuns.getVRSFromSignature(sgn.toString("hex"));
+        await expectRevert(
+            tokenConversionManager.conversionIn(accounts[1], amount_a1+100, conversionIdInHex, vrs.v, vrs.r, vrs.s, {from:accounts[1]}),
+            'Violates conversion limits'
+        );
+
+        sgn = await signFuns.waitSignedMessageConversionIn(accounts[9], amount_a1, accounts[1], conversionIdInHex, tokenConversionManager.address);
+        vrs = signFuns.getVRSFromSignature(sgn.toString("hex"));
+
+        // Try calling the function with different amount the Signature should fail
+        await expectRevert(
+            tokenConversionManager.conversionIn(accounts[1], amount_a1-10, conversionIdInHex, vrs.v, vrs.r, vrs.s, {from:accounts[1]}),
+            'Invalid request or signature'
+        );
+
+        await conversionInAndVerify(accounts[1], amount_a1, accounts[1], conversionIdInHex, vrs.v, vrs.r, vrs.s);
 
 
-        // If the amount is different from authorizer signature - Should fail
-        await testErrorRevert(tokenConversionManager.unLockTokens(amount_a1-10, blockNumber, sourceAddressBuffer, vrs.v, vrs.r, vrs.s, {from:accounts[1]}));
+        // Try calling the function with same Signature should fail
+        await expectRevert(
+            tokenConversionManager.conversionIn(accounts[1], amount_a1, conversionIdInHex, vrs.v, vrs.r, vrs.s, {from:accounts[1]}),
+            'Signature has already been used'
+        );
 
-        // With Signature Parameter
-        await unLockTokensAndVerify(amount_a1, blockNumber, sourceAddressBuffer, vrs.v, vrs.r, vrs.s, accounts[1]);
+        // Try to mint more than maxSupply Should fail
+        conversionId = getUUID();
+        conversionIdInHex = web3.utils.asciiToHex(conversionId);
+        const amount_a2 = amount_a1;
+        sgn = await signFuns.waitSignedMessageConversionIn(accounts[9], amount_a2, accounts[2], conversionIdInHex, tokenConversionManager.address);
+        vrs = signFuns.getVRSFromSignature(sgn.toString("hex"));
 
-        // User trying to pass same signature - Should fail
-        await testErrorRevert(tokenConversionManager.unLockTokens(amount_a1, blockNumber, sourceAddressBuffer, vrs.v, vrs.r, vrs.s, {from:accounts[1]}));
+        await expectRevert(
+            tokenConversionManager.conversionIn(accounts[2], amount_a2, conversionIdInHex, vrs.v, vrs.r, vrs.s, {from:accounts[2]}),
+            'Invalid Amount'
+        );
 
     });
 
