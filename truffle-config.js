@@ -18,7 +18,7 @@ let truffleOptions = {
         },
         develop : {
             host: "127.0.0.1",
-            port: 9545,
+            port: 8545,
             network_id: "*",
         },
         localhd: {
@@ -49,6 +49,13 @@ let truffleOptions = {
             onlyCalledMethods: 'true',
             showTimeSpent: 'true'
         }
+    },
+    plugins: [
+        'truffle-plugin-verify',
+        'solidity-coverage'
+          ],
+    api_keys: {
+        etherscan: process.env.EtherScanKey
     },
     // Configure your compilers
     compilers: {

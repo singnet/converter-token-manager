@@ -5,3 +5,8 @@ yarn-error.log
 npm-debug.log
 addresses.json
 /.vscode
+
+coverage/*
+coverage*
+.solcover.js
+coverage.json
