@@ -1,4 +1,4 @@
-pragma solidity >=0.4.22 <0.8.0;
+pragma solidity ^0.6.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20Burnable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
@@ -20,6 +20,9 @@ contract TokenConversionManager is Ownable, ReentrancyGuard {
     uint256 public perTxnMaxAmount;
     uint256 public maxSupply;
 
+    // Method Declaration
+    string public constant methodDeclaration =  "mint(address,uint256)";
+
     // Events
     event NewAuthorizer(address conversionAuthorizer);
     event UpdateConfiguration(uint256 perTxnMinAmount, uint256 perTxnMaxAmount, uint256 maxSupply);
@@ -37,7 +40,6 @@ contract TokenConversionManager is Ownable, ReentrancyGuard {
 
     }
 
-
     constructor(address _token)
     public
     {
@@ -45,7 +47,10 @@ contract TokenConversionManager is Ownable, ReentrancyGuard {
         conversionAuthorizer = msg.sender;
     }
 
-    function updateAuthorizer(address newAuthorizer) public onlyOwner {
+    /**
+    * @dev To update the authorizer who can authorize the conversions.
+    */
+    function updateAuthorizer(address newAuthorizer) external onlyOwner {
 
         require(newAuthorizer != address(0), "Invalid operator address");
         conversionAuthorizer = newAuthorizer;
@@ -53,7 +58,10 @@ contract TokenConversionManager is Ownable, ReentrancyGuard {
         emit NewAuthorizer(newAuthorizer);
     }
 
-    function updateConfigurations(uint256 _perTxnMinAmount, uint256 _perTxnMaxAmount, uint256 _maxSupply) public onlyOwner {
+    /**
+    * @dev To update the per transaction limits for the conversion and to provide max total supply 
+    */
+    function updateConfigurations(uint256 _perTxnMinAmount, uint256 _perTxnMaxAmount, uint256 _maxSupply) external onlyOwner {
 
         // Check for the valid inputs
         require(_perTxnMinAmount > 0 && _perTxnMaxAmount > _perTxnMinAmount && _maxSupply > 0, "Invalid inputs");
@@ -68,6 +76,11 @@ contract TokenConversionManager is Ownable, ReentrancyGuard {
     }
 
 
+    /**
+    * @dev To convert the tokens from Ethereum to non Ethereum network. 
+    * The tokens which needs to be convereted will be burned on the host network.
+    * The conversion authorizer needs to provide the signature to call this function.
+    */
     function conversionOut(uint256 amount, bytes32 conversionId, uint8 v, bytes32 r, bytes32 s) external checkLimits(amount) nonReentrant {
 
         // Check for non zero value for the amount is not needed as the Signature will not be generated for zero amount
@@ -93,11 +106,15 @@ contract TokenConversionManager is Ownable, ReentrancyGuard {
 
     }
 
-
+    /**
+    * @dev To convert the tokens from non Ethereum to Ethereum network. 
+    * The tokens which needs to be convereted will be minted on the host network.
+    * The conversion authorizer needs to provide the signature to call this function.
+    */
     function conversionIn(address to, uint256 amount, bytes32 conversionId, uint8 v, bytes32 r, bytes32 s) external checkLimits(amount) nonReentrant {
        
-       // Check for the valid destimation wallet
-       require(to != address(0), "Invalid wallet");
+        // Check for the valid destimation wallet
+        require(to != address(0), "Invalid wallet");
 
         // Check for non zero value for the amount is not needed as the Signature will not be generated for zero amount
 
@@ -118,7 +135,7 @@ contract TokenConversionManager is Ownable, ReentrancyGuard {
         // Mint the tokens and transfer to the User Wallet using the Call function
         // token.mint(amount, msg.sender);
 
-        (bool success, ) = address(token).call(abi.encodeWithSignature("mint(address,uint256)", to, amount));
+        (bool success, ) = address(token).call(abi.encodeWithSignature(methodDeclaration, to, amount));
 
         // In case if the mint call fails
         require(success, "ConversionIn Failed");
