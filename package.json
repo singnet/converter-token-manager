@@ -28,6 +28,7 @@
     "@openzeppelin/test-helpers": "^0.5.15",
     "@truffle/contract": "^4.2.23",
     "@truffle/hdwallet-provider": "^1.1.0",
+    "nunet-token-contracts": "^0.1.0",
     "singularitynet-token-contracts": "^3.0.0",
     "solidity-coverage": "^0.7.19",
     "truffle": "5.1.46",
