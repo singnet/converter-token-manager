@@ -21,7 +21,7 @@ contract TokenConversionManager is Ownable, ReentrancyGuard {
     uint256 public maxSupply;
 
     // Method Declaration
-    string public constant methodDeclaration =  "mint(address,uint256)";
+    bytes4 private constant MINT_SELECTOR = bytes4(keccak256("mint(address,uint256)"));
 
     // Events
     event NewAuthorizer(address conversionAuthorizer);
@@ -135,7 +135,7 @@ contract TokenConversionManager is Ownable, ReentrancyGuard {
         // Mint the tokens and transfer to the User Wallet using the Call function
         // token.mint(amount, msg.sender);
 
-        (bool success, ) = address(token).call(abi.encodeWithSignature(methodDeclaration, to, amount));
+        (bool success, ) = address(token).call(abi.encodeWithSelector(MINT_SELECTOR, to, amount));
 
         // In case if the mint call fails
         require(success, "ConversionIn Failed");
