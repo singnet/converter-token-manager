@@ -10,7 +10,9 @@ contract TokenConversionManager is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
 
     ERC20Burnable public token; // Address of token contract
+
     address public conversionAuthorizer; // Authorizer Address for the conversion 
+    address public feeReceiver; // Wallet address to receive the fee from the conversion
 
     //already used conversion signature from authorizer in order to prevent replay attack
     mapping (bytes32 => bool) public usedSignatures; 
@@ -20,12 +22,16 @@ contract TokenConversionManager is Ownable, ReentrancyGuard {
     uint256 public perTxnMaxAmount;
     uint256 public maxSupply;
 
+    // The fee percentage will be multiplied by 100 and passed during the configurations.
+    uint256 public feePercentage; 
+
     // Method Declaration
     bytes4 private constant MINT_SELECTOR = bytes4(keccak256("mint(address,uint256)"));
 
     // Events
     event NewAuthorizer(address conversionAuthorizer);
-    event UpdateConfiguration(uint256 perTxnMinAmount, uint256 perTxnMaxAmount, uint256 maxSupply);
+    event NewFeeReceiver(address newFeeReceiver);
+    event UpdateConfiguration(uint256 _feePercentage, uint256 perTxnMinAmount, uint256 perTxnMaxAmount, uint256 maxSupply);
 
     event ConversionOut(address indexed tokenHolder, bytes32 conversionId, uint256 amount);
     event ConversionIn(address indexed tokenHolder, bytes32 conversionId, uint256 amount);
@@ -45,6 +51,7 @@ contract TokenConversionManager is Ownable, ReentrancyGuard {
     {
         token = ERC20Burnable(_token);
         conversionAuthorizer = msg.sender;
+        feeReceiver = msg.sender;
     }
 
     /**
@@ -59,19 +66,38 @@ contract TokenConversionManager is Ownable, ReentrancyGuard {
     }
 
     /**
+    * @dev To update the fee receiver wallet address.
+    */
+    function updateFeeReceiver(address newFeeReceiver) external onlyOwner {
+
+        require(newFeeReceiver != address(0), "Invalid wallet address");
+        feeReceiver = newFeeReceiver;
+
+        emit NewFeeReceiver(newFeeReceiver);
+    }
+
+    /**
     * @dev To update the per transaction limits for the conversion and to provide max total supply 
     */
-    function updateConfigurations(uint256 _perTxnMinAmount, uint256 _perTxnMaxAmount, uint256 _maxSupply) external onlyOwner {
+    function updateConfigurations(
+        uint256 _feePercentage, 
+        uint256 _perTxnMinAmount, 
+        uint256 _perTxnMaxAmount, 
+        uint256 _maxSupply
+        ) external onlyOwner {
 
         // Check for the valid inputs
         require(_perTxnMinAmount > 0 && _perTxnMaxAmount > _perTxnMinAmount && _maxSupply > 0, "Invalid inputs");
+        require(_feePercentage >= 0 && _feePercentage <= 10000 , "Invalid Fee Percentage");
+
 
         // Update the configurations
+        feePercentage = _feePercentage;
         perTxnMinAmount = _perTxnMinAmount;
         perTxnMaxAmount = _perTxnMaxAmount;
         maxSupply = _maxSupply;
-
-        emit UpdateConfiguration(_perTxnMinAmount, _perTxnMaxAmount, _maxSupply);
+        
+        emit UpdateConfiguration(_feePercentage, _perTxnMinAmount, _perTxnMaxAmount, _maxSupply);
 
     }
 
@@ -135,10 +161,19 @@ contract TokenConversionManager is Ownable, ReentrancyGuard {
         // Mint the tokens and transfer to the User Wallet using the Call function
         // token.mint(amount, msg.sender);
 
-        (bool success, ) = address(token).call(abi.encodeWithSelector(MINT_SELECTOR, to, amount));
+        // Compute the Fee - The fee amount will be subtracted during the transfer
+        uint256 feeAmount = amount.mul(feePercentage).div(10000);
+
+        (bool success, ) = address(token).call(abi.encodeWithSelector(MINT_SELECTOR, address(this), amount));
 
         // In case if the mint call fails
         require(success, "ConversionIn Failed");
+
+        // Do the transfers
+        require(token.transfer(to, amount.sub(feeAmount)), "Unable to transfer token");
+        if(feeAmount > 0) {
+            require(token.transfer(feeReceiver, feeAmount), "Unable to transfer token");
+        }
 
         emit ConversionIn(msg.sender, conversionId, amount);
 
