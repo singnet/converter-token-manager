@@ -17,8 +17,8 @@ Placeholder to place the high level requirements
 ## Deployed Contracts (npm version 0.1.0)
 
 * TokenConversionManager (Mainnet): [Address Placeholder] (etherscan URL PLaceholder)
-* TokenConversionManager (Ropsten): [Address Placeholder] (etherscan URL PLaceholder)
-* TokenConversionManager (Kovan): [Address Placeholder] (etherscan URL PLaceholder)
+* TokenConversionManager (Ropsten): [0x5b4a4C77FA33D6617aF9F16d054F58a964A6afAB](https://ropsten.etherscan.io/address/0x5b4a4C77FA33D6617aF9F16d054F58a964A6afAB)
+* TokenConversionManager (Kovan): [0x90EDD8952dA35522F20D69Efe8983cefbB0A1b3d](https://kovan.etherscan.io/address/0x90EDD8952dA35522F20D69Efe8983cefbB0A1b3d)
 
 ## Install
 
