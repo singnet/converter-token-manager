@@ -35,6 +35,11 @@ let truffleOptions = {
              provider: () => provider("https://ropsten.infura.io/v3/" + process.env.InfuraKey),
             network_id: "3", // ropsten network ID, 
         },
+        goerli: {
+            gasPrice: 1000000000,
+            provider: () => provider("https://goerli.infura.io/v3/" + process.env.InfuraKey),
+            network_id: "5", // goerli network ID, 
+        },
         main: {
             gasPrice: 150000000000,
             provider: () => provider("https://mainnet.infura.io/v3/" + process.env.InfuraKey),
