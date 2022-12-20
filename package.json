@@ -1,6 +1,6 @@
 {
   "name": "singularitynet-token-manager",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "Includes token conversion manager contracts, migrations, tests",
   "directories": {
