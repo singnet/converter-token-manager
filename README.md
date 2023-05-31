@@ -34,6 +34,7 @@ ERC20 tokens like AGIX needs to be converted from Cardano to Ethereum and vice v
 * TokenConversionManager: [0x698573504b1f44daADb2De17A3f6a11F2D005a79](https://etherscan.io/address/0x698573504b1f44daADb2De17A3f6a11F2D005a79)
 * Cogito Governance Contract: [0xaeF420fd77477d9Dc8B46D704D44dD09d6c27866](https://etherscan.io/address/0xaeF420fd77477d9Dc8B46D704D44dD09d6c27866)
 
+
 ## Goerli:
 ### SingularityNet Token Conversion Contract
 * TokenConversionManager: [0xe331BF20044a5b24c1A744ABC90c1Fd711D2c08d](https://goerli.etherscan.io/address/0xe331BF20044a5b24c1A744ABC90c1Fd711D2c08d)
@@ -47,6 +48,7 @@ ERC20 tokens like AGIX needs to be converted from Cardano to Ethereum and vice v
 ### Cogito Governance Token Conversion Contract
 * TokenConversionManager: [0x322D9306E119264A10D3eD6Ee4F6a0f5fa2395Fb](https://goerli.etherscan.io/address/0x322D9306E119264A10D3eD6Ee4F6a0f5fa2395Fb)
 * Cogito Governance Contract: [0x033c4655babc35898ee9c15e15177bf68BDa68ac](https://goerli.etherscan.io/address/0x033c4655babc35898ee9c15e15177bf68BDa68ac)
+
 ## Install
 
 ### Dependencies
