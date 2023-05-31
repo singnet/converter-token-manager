@@ -12,6 +12,7 @@ ERC20 tokens like AGIX needs to be converted from Cardano to Ethereum and vice v
 * AGIX-ETH to AGIX-ADA
 * NTX-ETH to NTX-ADA
 * RJV-ETH to RJV-ADA
+* CGV-ETH to CGV-ADA
 
 ## Software Requirements
 * [Node.js](https://github.com/nodejs/node) (8+)
