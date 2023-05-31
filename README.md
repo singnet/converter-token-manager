@@ -29,6 +29,9 @@ ERC20 tokens like AGIX needs to be converted from Cardano to Ethereum and vice v
 ### Rejuve Token Conversion Contract
 * TokenConversionManager: [0x989A13F1558B40CccDcA97C2cc47788B15F02Cb0](https://etherscan.io/address/0x989a13f1558b40cccdca97c2cc47788b15f02cb0)
 * Rejuve Token Contract: [0x02c3296C6eb50249f290AE596F2bE9454bFfadaB](https://etherscan.io/address/0x02c3296c6eb50249f290ae596f2be9454bffadab)
+### Cogito Governance Conversion Contract
+* TokenConversionManager: [0x698573504b1f44daADb2De17A3f6a11F2D005a79](https://etherscan.io/address/0x698573504b1f44daADb2De17A3f6a11F2D005a79)
+* Cogito Governance Contract: [0xaeF420fd77477d9Dc8B46D704D44dD09d6c27866](https://etherscan.io/address/0xaeF420fd77477d9Dc8B46D704D44dD09d6c27866)
 
 ## Goerli:
 ### SingularityNet Token Conversion Contract
@@ -40,6 +43,9 @@ ERC20 tokens like AGIX needs to be converted from Cardano to Ethereum and vice v
 ### Rejuve Token Conversion Contract
 * TokenConversionManager: [0x4DCc70c6FCE4064803f0ae0cE48497B3f7182e5D](https://goerli.etherscan.io/address/0x4dcc70c6fce4064803f0ae0ce48497b3f7182e5d)
 * Rejuve Token Contract: [0xDCBD4B7DFd41a96b60B408120213925e41c21b25](https://goerli.etherscan.io/address/0xdcbd4b7dfd41a96b60b408120213925e41c21b25)
+### Cogito Governance Token Conversion Contract
+* TokenConversionManager: [0x322D9306E119264A10D3eD6Ee4F6a0f5fa2395Fb](https://goerli.etherscan.io/address/0x322D9306E119264A10D3eD6Ee4F6a0f5fa2395Fb)
+* Cogito Governance Contract: [0x033c4655babc35898ee9c15e15177bf68BDa68ac](https://goerli.etherscan.io/address/0x033c4655babc35898ee9c15e15177bf68BDa68ac)
 ## Install
 
 ### Dependencies
