@@ -28,8 +28,8 @@ ERC20 tokens like AGIX needs to be converted from Cardano to Ethereum and vice v
 * TokenConversionManager: [0x6C0d706c75b559549938c0b1De863cf7f042D1cf](https://etherscan.io/address/0x6c0d706c75b559549938c0b1de863cf7f042d1cf)
 * Nunet Token Contract: [0xF0d33BeDa4d734C72684b5f9abBEbf715D0a7935](https://etherscan.io/address/0xF0d33BeDa4d734C72684b5f9abBEbf715D0a7935)
 ### Rejuve Token Conversion Contract
-* TokenConversionManager: [0x989A13F1558B40CccDcA97C2cc47788B15F02Cb0](https://etherscan.io/address/0x989a13f1558b40cccdca97c2cc47788b15f02cb0)
-* Rejuve Token Contract: [0x02c3296C6eb50249f290AE596F2bE9454bFfadaB](https://etherscan.io/address/0x02c3296c6eb50249f290ae596f2be9454bffadab)
+* TokenConversionManager: [0x89E6943cE8cc550E3Ab91217d1fEACF4d665d1ee](https://etherscan.io/address/0x89E6943cE8cc550E3Ab91217d1fEACF4d665d1ee)
+* Rejuve Token Contract: [0xa1f410f13B6007fCa76833ee7eb58478D47Bc5Ef](https://etherscan.io/address/0xa1f410f13B6007fCa76833ee7eb58478D47Bc5Ef)
 ### Cogito Governance Conversion Contract
 * TokenConversionManager: [0x698573504b1f44daADb2De17A3f6a11F2D005a79](https://etherscan.io/address/0x698573504b1f44daADb2De17A3f6a11F2D005a79)
 * Cogito Governance Contract: [0xaeF420fd77477d9Dc8B46D704D44dD09d6c27866](https://etherscan.io/address/0xaeF420fd77477d9Dc8B46D704D44dD09d6c27866)
