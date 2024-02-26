@@ -91,21 +91,34 @@ console.log("Number of Accounts - ", accounts.length)
 
         }
 
-        const updateConfigurationsAndVerify = async(_perTxnMinAmount, _perTxnMaxAmount, _maxSupply, _account) => {
+        const updateFeeReceiverAndVerify = async(_feeReceiver, _account) => {
+
+            await tokenConversionManager.updateFeeReceiver(_feeReceiver, {from:_account});
+
+            // Get the Updated Fee Receiver
+            const feeReceiver = await tokenConversionManager.feeReceiver.call();
+            assert.equal(feeReceiver, _feeReceiver);
+
+        }
+
+
+        const updateConfigurationsAndVerify = async(_feePercentage, _perTxnMinAmount, _perTxnMaxAmount, _maxSupply, _account) => {
 
             // Update the configurations
-            await tokenConversionManager.updateConfigurations(_perTxnMinAmount, _perTxnMaxAmount, _maxSupply, {from:_account});
+            await tokenConversionManager.updateConfigurations(_feePercentage, _perTxnMinAmount, _perTxnMaxAmount, _maxSupply, {from:_account});
 
             // Get the values after the updation
             const perTxnMinAmount = (await tokenConversionManager.perTxnMinAmount.call()).toNumber();
             const perTxnMaxAmount =  (await tokenConversionManager.perTxnMaxAmount.call()).toNumber();
             const maxSupply = (await tokenConversionManager.maxSupply.call()).toNumber();
+            const feePercentage = (await tokenConversionManager.feePercentage.call()).toNumber();
 
 
             // Check the Values
             assert.equal(perTxnMinAmount, _perTxnMinAmount);
             assert.equal(perTxnMaxAmount, _perTxnMaxAmount);
             assert.equal(maxSupply, _maxSupply);
+            assert.equal(feePercentage, _feePercentage);
 
         }
 
@@ -138,8 +151,13 @@ console.log("Number of Accounts - ", accounts.length)
 
         const conversionInAndVerify = async(_to, _amount, _account, _conversionIdInHex, _v, _r, _s) => {
 
+            // Get the fee details
+            const feePercentage = (await tokenConversionManager.feePercentage.call()).toNumber();
+            const feeReceiver = await tokenConversionManager.feeReceiver.call();
+
             // Token Balance
             const wallet_bal_b = (await token.balanceOf(_to)).toNumber();
+            const feeReceiver_bal_b = (await token.balanceOf(feeReceiver)).toNumber();
 
             // total supply
             const totalSupply_b = (await token.totalSupply()).toNumber();
@@ -149,15 +167,22 @@ console.log("Number of Accounts - ", accounts.length)
 
             // Token Balance
             const wallet_bal_a = (await token.balanceOf(_to)).toNumber();
+            const feeReceiver_bal_a = (await token.balanceOf(feeReceiver)).toNumber();
 
             // total supply
             const totalSupply_a = (await token.totalSupply()).toNumber();
 
-            // Wallet Balance Should Reduce
-            assert.equal(wallet_bal_a, wallet_bal_b + _amount);
+            // Calculate the Fee
+            const feeAmount = (_amount * feePercentage) / 10000;
 
-            // Total Supply should reduce
-            assert.equal(totalSupply_a, totalSupply_b + _amount);
+            // Wallet Balance Should Increase
+            assert.equal(wallet_bal_a, wallet_bal_b + (_amount - feeAmount));
+
+            // Fee Receiver Balance Should Increase
+            assert.equal(feeReceiver_bal_a, feeReceiver_bal_b + feeAmount);
+
+            // Total Supply should Increaase
+            assert.equal(totalSupply_a, totalSupply_b + (_amount));
 
         }
 
@@ -255,7 +280,7 @@ console.log("Number of Accounts - ", accounts.length)
 
     });
 
-    it("2. Administrative Operations - Update Conversion Authorizer", async function() 
+    it("2. Administrative Operations - Update Conversion Authorizer & Fee Receiver", async function() 
     {
 
         // Update the Authorizer to accounts[9]
@@ -267,6 +292,23 @@ console.log("Number of Accounts - ", accounts.length)
         // Even the authorizer cannot update to another authorizer
         await testErrorRevert(tokenConversionManager.updateAuthorizer(accounts[8], {from:accounts[9]}));
 
+
+        // Update the Fee Receiver to accounts[8]
+        await updateFeeReceiverAndVerify(accounts[8], accounts[0]);
+
+        // Fee Receiver should be uodated only by Owner
+        await expectRevert(
+            tokenConversionManager.updateAuthorizer(accounts[7], {from:accounts[1]}),
+            'caller is not the owner'
+        );
+
+        // Even the Fee Receiver cannot update to another authorizer
+        await expectRevert(
+            tokenConversionManager.updateAuthorizer(accounts[7], {from:accounts[8]}),
+            'caller is not the owner'
+        );
+
+
     });
 
     it("3. Administrative Operations - Conversion Configurations", async function() 
@@ -275,15 +317,16 @@ console.log("Number of Accounts - ", accounts.length)
         const perTxnMinAmount = 1 * factor;
         const perTxnMaxAmount = amount_a1;
         const maxSupply = GAmt;
+        const feePercentage = 0.05 * 100;
 
         // Authorizer should be uodated only by Owner
         await expectRevert(
-            tokenConversionManager.updateConfigurations(perTxnMinAmount, perTxnMaxAmount, maxSupply, {from: accounts[1]}),
+            tokenConversionManager.updateConfigurations(feePercentage, perTxnMinAmount, perTxnMaxAmount, maxSupply, {from: accounts[1]}),
             "caller is not the owner"
         );
 
         // Update the Authorizer to accounts[9]
-        await updateConfigurationsAndVerify(perTxnMinAmount, perTxnMaxAmount, maxSupply, accounts[0]);
+        await updateConfigurationsAndVerify(feePercentage, perTxnMinAmount, perTxnMaxAmount, maxSupply, accounts[0]);
 
     });
 
